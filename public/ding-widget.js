@@ -861,7 +861,14 @@
         data = await response.json();
       } else {
         const textResp = await response.text();
-        throw new Error(response.ok ? 'Server returned non-JSON response' : 'Server returned HTTP ' + response.status);
+        const trimmed = textResp.trim();
+        if (trimmed.startsWith('<?php')) {
+          throw new Error('Static host does not execute PHP. Please point data-api to an active backend API.');
+        } else if (trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')) {
+          throw new Error('Endpoint returned HTML page instead of JSON API response.');
+        } else {
+          throw new Error(response.ok ? 'Server returned non-JSON response' : 'Server returned HTTP ' + response.status);
+        }
       }
       if (typingIndicator) typingIndicator.style.display = 'none';
 

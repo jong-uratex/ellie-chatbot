@@ -136,8 +136,9 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState('api.php');
   const [fileContents, setFileContents] = useState({});
 
-  // Backend host for embed snippets (e.g. Uratex dev server, Shopify, production)
-  const [backendHost, setBackendHost] = useState('https://dev.uratex.com.ph/jong/ai-chat');
+  // Widget static host & API backend host
+  const [widgetHost, setWidgetHost] = useState('https://ellie-chatbot.pages.dev');
+  const [apiHost, setApiHost] = useState('https://ais-pre-7exb7phzwsecehc3h3i2za-944842683298.asia-southeast1.run.app/api.php');
 
   // Initialize session
   useEffect(() => {
@@ -370,13 +371,15 @@ export default function App() {
   };
 
   // Generate Script Tag
-  const cleanHost = backendHost.replace(/\/+$/, '');
+  const cleanWidgetHost = widgetHost.replace(/\/+$/, '');
+  const cleanApiHost = apiHost.replace(/\/+$/, '');
+
   const scriptTagCode = `<!-- 1-Minute Drop-in E.L.L.I.E. Chatbot Integration (Self-injecting styles & SVGs) -->
 <script 
-  src="${cleanHost}/public/ding-widget.js"
+  src="${cleanWidgetHost}/public/ding-widget.js"
   async
-  data-api="${cleanHost}/api.php"
-  data-icon="${cleanHost}/ellie.jpeg"
+  data-api="${cleanApiHost}"
+  data-icon="${cleanWidgetHost}/ellie.jpeg"
   data-model="${selectedModel}"
   data-title="${title}"
   data-subtitle="${subtitle}"
@@ -392,10 +395,10 @@ export default function App() {
 
   const shopifySnippetCode = `<!-- E.L.L.I.E. Chatbot for Shopify (Paste in layout/theme.liquid right before </body>) -->
 <script 
-  src="${cleanHost}/public/ding-widget.js"
+  src="${cleanWidgetHost}/public/ding-widget.js"
   async
-  data-api="${cleanHost}/api.php"
-  data-icon="${cleanHost}/ellie.jpeg"
+  data-api="${cleanApiHost}"
+  data-icon="${cleanWidgetHost}/ellie.jpeg"
   data-model="${selectedModel}"
   data-title="${title}"
   data-subtitle="${subtitle}"
@@ -411,7 +414,8 @@ export default function App() {
 
   const jsInitCode = `// Programmatic JavaScript Integration
 DingChat.init({
-  apiEndpoint: '${cleanHost}/api.php',
+  apiEndpoint: '${cleanApiHost}',
+  icon: '${cleanWidgetHost}/ellie.jpeg',
   model: '${selectedModel}',
   title: '${title}',
   subtitle: '${subtitle}',
@@ -733,87 +737,125 @@ DingChat.init({
               </div>
 
               {/* Host URL configurator */}
-              <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                      <ExternalLink className="w-3.5 h-3.5 text-blue-400" /> Backend Host URL
-                    </label>
-                    <p className="text-xs text-slate-400">
-                      Select where your widget script and backend API are hosted:
-                    </p>
-                  </div>
-                  <input 
-                    type="text"
-                    value={backendHost}
-                    onChange={e => setBackendHost(e.target.value)}
-                    placeholder="https://dev.uratex.com.ph/jong/ai-chat"
-                    className="w-full md:w-96 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-blue-300 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Quick Presets */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800/80">
-                  <span className="text-[11px] text-slate-400 font-medium">Quick Presets:</span>
-                  <button
-                    onClick={() => setBackendHost('https://dev.uratex.com.ph/jong/ai-chat')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-mono transition ${
-                      backendHost.includes('dev.uratex.com.ph') 
-                        ? 'bg-blue-600 text-white font-semibold' 
-                        : 'bg-slate-950 text-slate-300 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    🏢 dev.uratex.com.ph (PHP Server)
-                  </button>
-                  <button
-                    onClick={() => setBackendHost(window.location.origin)}
-                    className={`px-2.5 py-1 rounded text-[11px] font-mono transition ${
-                      backendHost === window.location.origin
-                        ? 'bg-blue-600 text-white font-semibold' 
-                        : 'bg-slate-950 text-slate-300 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    ☁️ This Cloud Hosted Service (Instant & Live)
-                  </button>
-                </div>
-              </div>
-
-              {/* Sync Alert for github.com/jong-uratex/email-generator */}
-              <div className="p-4 rounded-xl bg-slate-950/80 border border-blue-500/30 text-xs space-y-3">
+              {/* Host Configuration Panel */}
+              <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-blue-300 font-bold">
-                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-                    <span>Fixing the Embed on email-signature-4ti.pages.dev (jong-uratex/email-generator)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white">Active Deployment Hosts</h3>
                   </div>
-                  <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded font-mono">
-                    2 Solutions
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Host: ellie-chatbot.pages.dev
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                  <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-xs">
-                      <CheckCircle2 className="w-4 h-4" /> Option A: Instant Fix (Zero Deploy Needed)
-                    </div>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
-                      In your repo <code className="text-emerald-300 font-mono">index.html</code> (line 623), point the script tags to this live hosted cloud applet. Ellie will immediately answer with the full 5-step signature guide and load her photo avatar!
-                    </p>
+
+                {/* 1-Click Recommended Bundles */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] text-slate-400 font-medium">Quick Configuration Presets:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <button
-                      onClick={() => setBackendHost(window.location.origin)}
-                      className="mt-1 text-[11px] text-emerald-300 hover:text-white underline font-medium"
+                      onClick={() => {
+                        setWidgetHost('https://ellie-chatbot.pages.dev');
+                        setApiHost('https://ais-pre-7exb7phzwsecehc3h3i2za-944842683298.asia-southeast1.run.app/api.php');
+                      }}
+                      className={`p-2.5 rounded-lg text-left border transition text-xs ${
+                        widgetHost.includes('ellie-chatbot.pages.dev') && apiHost.includes('run.app')
+                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm'
+                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
                     >
-                      Click here to switch snippet to Cloud Hosted URL →
+                      <div className="font-semibold text-blue-300 flex items-center gap-1">
+                        ⚡ Recommended (Hybrid)
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Pages CDN for widget + Cloud Run AI API with failover
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setWidgetHost('https://ellie-chatbot.pages.dev');
+                        setApiHost('https://dev.uratex.com.ph/jong/ai-chat/api.php');
+                      }}
+                      className={`p-2.5 rounded-lg text-left border transition text-xs ${
+                        widgetHost.includes('ellie-chatbot.pages.dev') && apiHost.includes('dev.uratex.com.ph')
+                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm'
+                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="font-semibold text-emerald-300 flex items-center gap-1">
+                        🏢 Pages + Uratex PHP
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Pages CDN for widget + dev.uratex.com.ph for backend
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setWidgetHost('https://dev.uratex.com.ph/jong/ai-chat');
+                        setApiHost('https://dev.uratex.com.ph/jong/ai-chat/api.php');
+                      }}
+                      className={`p-2.5 rounded-lg text-left border transition text-xs ${
+                        widgetHost.includes('dev.uratex.com.ph')
+                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm'
+                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="font-semibold text-amber-300 flex items-center gap-1">
+                        📦 All-in-One Uratex
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Both widget and API on dev.uratex.com.ph
+                      </div>
                     </button>
                   </div>
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-blue-400 font-semibold text-xs">
-                      <FileCode className="w-4 h-4" /> Option B: Update dev.uratex.com.ph
-                    </div>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
-                      If keeping <code className="text-blue-300 font-mono">dev.uratex.com.ph</code>, upload the 4 updated files from the <strong>PHP Backend Files</strong> tab (<code className="text-slate-200">api.php</code>, <code className="text-slate-200">ding-widget.js</code>, <code className="text-slate-200">prompt.csv</code>, <code className="text-slate-200">ellie.jpeg</code>) to your server folder <code className="text-blue-200 font-mono">/jong/ai-chat/</code>.
-                    </p>
+                </div>
+
+                {/* Granular URL Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Code className="w-3.5 h-3.5 text-blue-400" /> Widget CDN Host (JS & Avatar)
+                    </label>
+                    <input 
+                      type="text"
+                      value={widgetHost}
+                      onChange={e => setWidgetHost(e.target.value)}
+                      placeholder="https://ellie-chatbot.pages.dev"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-blue-300 focus:border-blue-500 focus:outline-none"
+                    />
+                    <p className="text-[10px] text-slate-500">Provides <code className="text-slate-400">/public/ding-widget.js</code> and <code className="text-slate-400">/ellie.jpeg</code></p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-emerald-400" /> Backend API Endpoint (data-api)
+                    </label>
+                    <input 
+                      type="text"
+                      value={apiHost}
+                      onChange={e => setApiHost(e.target.value)}
+                      placeholder="https://dev.uratex.com.ph/jong/ai-chat/api.php"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-emerald-300 focus:border-emerald-500 focus:outline-none"
+                    />
+                    <p className="text-[10px] text-slate-500">Receives chat messages and executes LLM/rules logic</p>
                   </div>
                 </div>
               </div>
+
+              {/* Notice for Cloudflare Pages */}
+              {widgetHost.includes('ellie-chatbot.pages.dev') && apiHost.includes('ellie-chatbot.pages.dev') && (
+                <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-amber-300 font-bold">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>Important: Cloudflare Pages is a static host</span>
+                  </div>
+                  <p className="text-slate-300 leading-relaxed text-[11.5px]">
+                    Cloudflare Pages serves static files (HTML, CSS, JS, images) and does not execute PHP scripts. Ensure your <code className="text-amber-200 font-mono">data-api</code> is set to an active backend server (such as <code className="text-emerald-300 font-mono">dev.uratex.com.ph/jong/ai-chat/api.php</code> or the Cloud Run AI API URL) so chat messages are processed properly.
+                  </p>
+                </div>
+              )}
 
               {/* Quick Code Block */}
               <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
