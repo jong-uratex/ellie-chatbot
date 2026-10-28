@@ -30,7 +30,10 @@ import {
   Wifi,
   AlertCircle,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Cloud,
+  Globe,
+  Zap
 } from 'lucide-react';
 
 export default function App() {
@@ -138,7 +141,55 @@ export default function App() {
 
   // Widget static host & API backend host
   const [widgetHost, setWidgetHost] = useState('https://ellie-chatbot.pages.dev');
-  const [apiHost, setApiHost] = useState('https://ais-pre-7exb7phzwsecehc3h3i2za-944842683298.asia-southeast1.run.app/api.php');
+  const [apiHost, setApiHost] = useState('https://ellie-chatbot.pages.dev/api.php');
+
+  // Cloudflare live tester state
+  const [cfTestTarget, setCfTestTarget] = useState('https://ellie-chatbot.pages.dev/api.php?action=ping');
+  const [cfTestResult, setCfTestResult] = useState(null);
+  const [cfIsTesting, setCfIsTesting] = useState(false);
+
+  const runCloudflareTest = async (urlToTest, method = 'GET', body = null) => {
+    setCfIsTesting(true);
+    setCfTestResult(null);
+    const start = performance.now();
+    try {
+      const opts = { method };
+      if (body) {
+        opts.headers = { 'Content-Type': 'application/json' };
+        opts.body = JSON.stringify(body);
+      }
+      const res = await fetch(urlToTest, opts);
+      const elapsed = Math.round(performance.now() - start);
+      const contentType = res.headers.get('content-type') || '';
+      let data;
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        data = { rawText: text.substring(0, 400), contentType };
+      }
+      setCfTestResult({
+        ok: res.ok,
+        status: res.status,
+        statusText: res.statusText,
+        elapsedMs: elapsed,
+        data,
+        target: urlToTest
+      });
+    } catch (err) {
+      const elapsed = Math.round(performance.now() - start);
+      setCfTestResult({
+        ok: false,
+        status: 'Network Error',
+        statusText: err.message,
+        elapsedMs: elapsed,
+        error: err.message,
+        target: urlToTest
+      });
+    } finally {
+      setCfIsTesting(false);
+    }
+  };
 
   // Initialize session
   useEffect(() => {
@@ -241,7 +292,22 @@ export default function App() {
   };
 
   const loadPhpFiles = async () => {
-    const files = ['api.php', 'index.php', 'prompt_manager.php', 'public/ding-widget.js', 'public/ding-widget.css', '.htaccess'];
+    const files = [
+      'functions/api/[[path]].js',
+      'functions/api.php.js',
+      'functions/_shared/data.js',
+      'public/_redirects',
+      'public/_headers',
+      'wrangler.toml',
+      'api.php',
+      'index.php',
+      'prompt_manager.php',
+      'prompt.csv',
+      'directory.json',
+      '.htaccess',
+      'public/ding-widget.js',
+      'public/ding-widget.css'
+    ];
     const loaded = {};
     for (const f of files) {
       try {
@@ -469,6 +535,14 @@ DingChat.init({
         {/* Header Tabs */}
         <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
           <button
+            onClick={() => setActiveTab('cloudflare')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+              activeTab === 'cloudflare' ? 'bg-orange-600 text-white shadow font-semibold' : 'text-orange-400 hover:text-white bg-orange-500/10'
+            }`}
+          >
+            <Cloud className="w-3.5 h-3.5" /> Cloudflare Pages Hosting
+          </button>
+          <button
             onClick={() => setActiveTab('diagnostics')}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
               activeTab === 'diagnostics' ? 'bg-amber-600 text-white shadow font-semibold' : 'text-amber-400 hover:text-white bg-amber-500/10'
@@ -498,7 +572,7 @@ DingChat.init({
               activeTab === 'php' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <FileCode className="w-3.5 h-3.5" /> PHP Backend Files
+            <FileCode className="w-3.5 h-3.5" /> Backend Files & Functions
           </button>
           <button
             onClick={() => setActiveTab('api')}
@@ -525,6 +599,230 @@ DingChat.init({
         {/* Left Panel: Content / Config / Code (7 columns) */}
         <div className="lg:col-span-7 border-r border-slate-800 p-6 overflow-y-auto max-h-[calc(100vh-65px)]">
           
+          {/* TAB: CLOUDFLARE PAGES HOSTING & FUNCTIONS */}
+          {activeTab === 'cloudflare' && (
+            <div className="space-y-6">
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 mb-2">
+                  <Cloud className="w-3.5 h-3.5" /> Cloudflare Pages Native Deployment
+                </div>
+                <h2 className="text-xl font-bold text-white flex items-center justify-between">
+                  <span>Cloudflare Pages Compatibility Hub</span>
+                  <a
+                    href="https://ellie-chatbot.pages.dev"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-semibold transition shadow"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Visit ellie-chatbot.pages.dev
+                  </a>
+                </h2>
+                <p className="text-sm text-slate-400 mt-1">
+                  Full edge serverless compatibility suite for your Cloudflare Pages project <code className="text-orange-300 font-mono">ellie-chatbot</code> at <code className="text-orange-300 font-mono">https://ellie-chatbot.pages.dev/</code>.
+                </p>
+              </div>
+
+              {/* Status Banner */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-orange-950/40 via-slate-900/80 to-slate-900/80 border border-orange-500/30 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-white">How Cloudflare Pages Runs Both Widget & API (Zero Server Needed)</h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Cloudflare Pages is a global edge CDN. Previously, calling <code className="text-orange-300 font-mono">api.php</code> resulted in raw PHP or HTML errors because static hosts do not execute PHP.
+                    </p>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      We have resolved this natively with <strong>Cloudflare Pages Functions</strong>:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+                      <div className="bg-slate-950/70 border border-orange-500/20 rounded p-2 text-slate-300">
+                        <strong className="text-orange-300 font-mono">/functions/api.php.js</strong>
+                        <div className="text-slate-400 mt-0.5">
+                          Intercepts legacy <code className="text-slate-300">data-api=".../api.php"</code> requests and executes as an Edge Worker!
+                        </div>
+                      </div>
+                      <div className="bg-slate-950/70 border border-orange-500/20 rounded p-2 text-slate-300">
+                        <strong className="text-orange-300 font-mono">/functions/api/[[path]].js</strong>
+                        <div className="text-slate-400 mt-0.5">
+                          Handles modern clean REST routes (<code className="text-slate-300">/api/chat</code>, <code className="text-slate-300">/api/models</code>, <code className="text-slate-300">/api/session</code>).
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cloudflare Pages Edge Tester */}
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-orange-400" /> Interactive Edge Endpoint Tester
+                  </h3>
+                  <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
+                    Direct Edge Probing
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Select a test case below to verify that your Cloudflare Pages endpoints and functions return clean JSON:
+                </p>
+
+                {/* Preset Test Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      setCfTestTarget('https://ellie-chatbot.pages.dev/api.php?action=ping');
+                      runCloudflareTest('https://ellie-chatbot.pages.dev/api.php?action=ping', 'GET');
+                    }}
+                    disabled={cfIsTesting}
+                    className="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30 text-xs font-medium transition"
+                  >
+                    1. Test Legacy api.php?action=ping
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setCfTestTarget('https://ellie-chatbot.pages.dev/api/models');
+                      runCloudflareTest('https://ellie-chatbot.pages.dev/api/models', 'GET');
+                    }}
+                    disabled={cfIsTesting}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-medium transition"
+                  >
+                    2. Test GET /api/models
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setCfTestTarget('https://ellie-chatbot.pages.dev/api.php?action=chat');
+                      runCloudflareTest('https://ellie-chatbot.pages.dev/api.php?action=chat', 'POST', {
+                        message: "How can I use this Email signature generator?",
+                        model: "qwen2.5-coder:1.5b",
+                        sessionId: sessionId
+                      });
+                    }}
+                    disabled={cfIsTesting}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition"
+                  >
+                    3. Test Rule 12 (Email Signature)
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setCfTestTarget('https://ellie-chatbot.pages.dev/api/chat');
+                      runCloudflareTest('https://ellie-chatbot.pages.dev/api/chat', 'POST', {
+                        message: "Hi Ellie. I need help with my keyboard",
+                        model: "qwen2.5-coder:1.5b",
+                        sessionId: sessionId
+                      });
+                    }}
+                    disabled={cfIsTesting}
+                    className="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-medium transition"
+                  >
+                    4. Test Rule 7 (Keyboard Hardware)
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setCfTestTarget('/api/ping');
+                      runCloudflareTest('/api/ping', 'GET');
+                    }}
+                    disabled={cfIsTesting}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+                  >
+                    5. Test Local Applet Engine (/api/ping)
+                  </button>
+                </div>
+
+                {/* Test Result Display */}
+                {cfIsTesting && (
+                  <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg flex items-center gap-2 text-xs text-orange-300">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Connecting to <code className="font-mono text-white">{cfTestTarget}</code>...</span>
+                  </div>
+                )}
+
+                {cfTestResult && !cfIsTesting && (
+                  <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden space-y-2">
+                    <div className="px-3 py-2 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${cfTestResult.ok ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                        <span className="font-mono text-slate-300">{cfTestResult.target}</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-[11px]">
+                        <span className={cfTestResult.ok ? 'text-emerald-400' : 'text-rose-400'}>
+                          HTTP {cfTestResult.status} {cfTestResult.statusText}
+                        </span>
+                        <span className="text-slate-500">•</span>
+                        <span className="text-blue-400">{cfTestResult.elapsedMs}ms</span>
+                      </div>
+                    </div>
+                    <pre className="p-3 text-xs font-mono text-emerald-300 overflow-x-auto max-h-60 leading-relaxed">
+                      {JSON.stringify(cfTestResult.data || cfTestResult, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              {/* Cloudflare Pages Deployment Settings Guide */}
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Cloudflare Pages Dashboard Settings Checklist
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-slate-900 rounded-lg border border-slate-800/80 space-y-2">
+                    <div className="font-bold text-white flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Build Configuration
+                    </div>
+                    <ul className="text-slate-400 space-y-1 text-[11px]">
+                      <li>• <strong>Framework preset:</strong> Vite</li>
+                      <li>• <strong>Build command:</strong> <code className="text-slate-200 bg-slate-950 px-1 py-0.5 rounded">npm run build</code></li>
+                      <li>• <strong>Build output directory:</strong> <code className="text-slate-200 bg-slate-950 px-1 py-0.5 rounded">dist</code></li>
+                      <li>• <strong>Root directory:</strong> <code className="text-slate-200 bg-slate-950 px-1 py-0.5 rounded">/</code></li>
+                    </ul>
+                  </div>
+
+                  <div className="p-3 bg-slate-900 rounded-lg border border-slate-800/80 space-y-2">
+                    <div className="font-bold text-white flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Environment Variables (Pages &gt; Settings)
+                    </div>
+                    <ul className="text-slate-400 space-y-1 text-[11px]">
+                      <li>• <code className="text-orange-300">GEMINI_API_KEY</code>: <em>Your Gemini API key for Cloud AI</em></li>
+                      <li>• <code className="text-orange-300">OLLAMA_API_URL</code>: <em>http://10.0.120.202:11434/v1/chat/completions</em></li>
+                      <li>• <code className="text-orange-300">OLLAMA_API_KEY</code>: <em>uratex_corp_it_jwt_token_auth_2026</em></li>
+                      <li>• <code className="text-orange-300">OLLAMA_MODEL</code>: <em>qwen2.5-coder:1.5b</em></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Created Cloudflare Files List */}
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                  <Code className="w-3.5 h-3.5 text-blue-400" /> Cloudflare Files Added to Repository
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {[
+                    { file: '/functions/api.php.js', desc: 'Catches and executes api.php?action=* requests at edge' },
+                    { file: '/functions/api/[[path]].js', desc: 'Catchall router for /api/* REST endpoints' },
+                    { file: '/functions/_shared/data.js', desc: 'Edge Rule engine (Rules 1-12) & IT staff directory' },
+                    { file: '/public/_redirects', desc: 'Maps /public/ding-widget.js to root cleanly' },
+                    { file: '/public/_headers', desc: 'Permissive CORS headers for widget script & CSS' },
+                    { file: '/wrangler.toml', desc: 'Cloudflare Pages compatibility configuration' }
+                  ].map((item, idx) => (
+                    <div key={idx} className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-mono font-bold text-blue-300 text-[11px]">{item.file}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 0: OLLAMA API CONFIGURATION & HEALTH DIAGNOSTICS */}
           {activeTab === 'diagnostics' && (
             <div className="space-y-6">
@@ -752,7 +1050,45 @@ DingChat.init({
                 {/* 1-Click Recommended Bundles */}
                 <div className="space-y-1.5">
                   <span className="text-[11px] text-slate-400 font-medium">Quick Configuration Presets:</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <button
+                      onClick={() => {
+                        setWidgetHost('https://ellie-chatbot.pages.dev');
+                        setApiHost('https://ellie-chatbot.pages.dev/api.php');
+                      }}
+                      className={`p-2.5 rounded-lg text-left border transition text-xs ${
+                        widgetHost.includes('ellie-chatbot.pages.dev') && apiHost.endsWith('api.php')
+                          ? 'bg-orange-600/20 border-orange-500 text-white shadow-sm ring-1 ring-orange-500/40'
+                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="font-semibold text-orange-300 flex items-center gap-1">
+                        ☁️ Cloudflare Pages (api.php)
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Native edge function /api.php.js (100% legacy compatible)
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setWidgetHost('https://ellie-chatbot.pages.dev');
+                        setApiHost('https://ellie-chatbot.pages.dev/api/chat');
+                      }}
+                      className={`p-2.5 rounded-lg text-left border transition text-xs ${
+                        widgetHost.includes('ellie-chatbot.pages.dev') && apiHost.endsWith('/chat')
+                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/40'
+                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="font-semibold text-blue-300 flex items-center gap-1">
+                        ⚡ Cloudflare Pages (/api/chat)
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Clean REST edge function via /functions/api/[[path]].js
+                      </div>
+                    </button>
+
                     <button
                       onClick={() => {
                         setWidgetHost('https://ellie-chatbot.pages.dev');
@@ -764,30 +1100,11 @@ DingChat.init({
                           : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
                       }`}
                     >
-                      <div className="font-semibold text-blue-300 flex items-center gap-1">
-                        ⚡ Recommended (Hybrid)
-                      </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        Pages CDN for widget + Cloud Run AI API with failover
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setWidgetHost('https://ellie-chatbot.pages.dev');
-                        setApiHost('https://dev.uratex.com.ph/jong/ai-chat/api.php');
-                      }}
-                      className={`p-2.5 rounded-lg text-left border transition text-xs ${
-                        widgetHost.includes('ellie-chatbot.pages.dev') && apiHost.includes('dev.uratex.com.ph')
-                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm'
-                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                      }`}
-                    >
                       <div className="font-semibold text-emerald-300 flex items-center gap-1">
-                        🏢 Pages + Uratex PHP
+                        🚀 Hybrid (Pages + Run)
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
-                        Pages CDN for widget + dev.uratex.com.ph for backend
+                        Pages CDN for widget + Cloud Run Node backend
                       </div>
                     </button>
 
@@ -803,10 +1120,10 @@ DingChat.init({
                       }`}
                     >
                       <div className="font-semibold text-amber-300 flex items-center gap-1">
-                        📦 All-in-One Uratex
+                        🏢 Uratex Server PHP
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
-                        Both widget and API on dev.uratex.com.ph
+                        Traditional Apache/PHP backend on dev.uratex.com.ph
                       </div>
                     </button>
                   </div>
@@ -836,23 +1153,23 @@ DingChat.init({
                       type="text"
                       value={apiHost}
                       onChange={e => setApiHost(e.target.value)}
-                      placeholder="https://dev.uratex.com.ph/jong/ai-chat/api.php"
+                      placeholder="https://ellie-chatbot.pages.dev/api.php"
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-emerald-300 focus:border-emerald-500 focus:outline-none"
                     />
-                    <p className="text-[10px] text-slate-500">Receives chat messages and executes LLM/rules logic</p>
+                    <p className="text-[10px] text-slate-500">Executes Rule Engine & LLM via Cloudflare Edge Functions</p>
                   </div>
                 </div>
               </div>
 
-              {/* Notice for Cloudflare Pages */}
+              {/* Cloudflare Pages Functions Status Notice */}
               {widgetHost.includes('ellie-chatbot.pages.dev') && apiHost.includes('ellie-chatbot.pages.dev') && (
-                <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-amber-300 font-bold">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>Important: Cloudflare Pages is a static host</span>
+                <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span>Cloudflare Pages Functions Active on this Endpoint</span>
                   </div>
                   <p className="text-slate-300 leading-relaxed text-[11.5px]">
-                    Cloudflare Pages serves static files (HTML, CSS, JS, images) and does not execute PHP scripts. Ensure your <code className="text-amber-200 font-mono">data-api</code> is set to an active backend server (such as <code className="text-emerald-300 font-mono">dev.uratex.com.ph/jong/ai-chat/api.php</code> or the Cloud Run AI API URL) so chat messages are processed properly.
+                    Your repo includes <code className="text-emerald-300 font-mono">/functions/api.php.js</code> and <code className="text-emerald-300 font-mono">/functions/api/[[path]].js</code>. When deployed to Cloudflare Pages, requests to <code className="text-slate-200 font-mono">https://ellie-chatbot.pages.dev/api.php</code> execute as serverless Edge Functions rather than returning raw text.
                   </p>
                 </div>
               )}
@@ -1247,12 +1564,18 @@ DingChat.init({
               {/* File Selector Tabs */}
               <div className="flex flex-wrap gap-2">
                 {[
-                  { id: 'api.php', name: 'api.php (Core API & Session Store)' },
-                  { id: 'index.php', name: 'index.php (Standalone UI)' },
-                  { id: 'prompt_manager.php', name: 'prompt_manager.php (Admin)' },
-                  { id: 'public/ding-widget.js', name: 'ding-widget.js (Embed Widget)' },
-                  { id: 'public/ding-widget.css', name: 'ding-widget.css (Styles)' },
-                  { id: '.htaccess', name: '.htaccess (CORS & Security)' }
+                  { id: 'functions/api.php.js', name: '⚡ functions/api.php.js (Cloudflare Edge)' },
+                  { id: 'functions/api/[[path]].js', name: '⚡ functions/api/[[path]].js (Cloudflare Router)' },
+                  { id: 'functions/_shared/data.js', name: 'functions/_shared/data.js' },
+                  { id: 'wrangler.toml', name: 'wrangler.toml' },
+                  { id: 'public/_redirects', name: '_redirects (Cloudflare)' },
+                  { id: 'public/_headers', name: '_headers (Cloudflare CORS)' },
+                  { id: 'api.php', name: 'api.php (PHP Core)' },
+                  { id: 'public/ding-widget.js', name: 'ding-widget.js (Widget)' },
+                  { id: 'public/ding-widget.css', name: 'ding-widget.css' },
+                  { id: 'index.php', name: 'index.php' },
+                  { id: 'prompt_manager.php', name: 'prompt_manager.php' },
+                  { id: '.htaccess', name: '.htaccess' }
                 ].map(f => (
                   <button
                     key={f.id}

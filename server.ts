@@ -453,7 +453,11 @@ async function handleApi(req: express.Request, res: express.Response) {
   // 8. FILES
   if (action === 'files' || req.path === '/api/files') {
     const fileName = ((url.searchParams.get('file') as string) || '').replace(/\.\.\//g, '');
-    const allowed = ['api.php', 'index.php', 'prompt_manager.php', 'prompt.csv', 'directory.json', '.htaccess', 'public/ding-widget.js', 'public/ding-widget.css'];
+    const allowed = [
+      'api.php', 'index.php', 'prompt_manager.php', 'prompt.csv', 'directory.json', '.htaccess', 
+      'public/ding-widget.js', 'public/ding-widget.css', 'public/_redirects', 'public/_headers',
+      'wrangler.toml', 'functions/api.php.js', 'functions/api/[[path]].js', 'functions/_shared/data.js'
+    ];
     if (allowed.includes(fileName)) {
       const targetPath = path.resolve(__dirname, fileName);
       if (fs.existsSync(targetPath)) {
