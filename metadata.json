@@ -1,0 +1,8 @@
+{
+  "name": "Remix AI IT Helpdask Embeddable Chatbot \u0026 PHP API",
+  "description": "Lightweight, customizable IT chatbot widget embeddable via a single script tag with secure PHP backend API and session persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

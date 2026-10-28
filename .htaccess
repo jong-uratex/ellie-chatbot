@@ -1,0 +1,23 @@
+# Apache Security and CORS Configuration for E.L.L.I.E. Chatbot API
+
+# Enable CORS for widget integrations across domains
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-Session-Id"
+</IfModule>
+
+# Protect sessions directory and prompt CSV from direct unauthorized web listing
+<Files "prompt.csv">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<FilesMatch "\.(json|csv)$">
+    <IfModule mod_authz_core.c>
+        # Allow directory.json for public search if needed or restrict as appropriate
+    </IfModule>
+</FilesMatch>
+
+# Options
+Options -Indexes

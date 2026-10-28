@@ -1,0 +1,456 @@
+/**
+ * E.L.L.I.E. Chatbot Widget Stylesheet
+ * Scoped, customizable, and conflict-free.
+ */
+
+:root {
+  --ding-primary: #0084ff;
+  --ding-primary-hover: #006bce;
+  --ding-primary-light: #e7f3ff;
+  --ding-bg: #ffffff;
+  --ding-header-bg: #ffffff;
+  --ding-header-text: #0f172a;
+  --ding-body-bg: #f8fafc;
+  --ding-user-bubble: #0084ff;
+  --ding-user-text: #ffffff;
+  --ding-bot-bubble: #f1f5f9;
+  --ding-bot-text: #0f172a;
+  --ding-border: #e2e8f0;
+  --ding-radius: 16px;
+  --ding-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  --ding-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --ding-zindex: 999999;
+}
+
+[data-ding-theme="dark"] {
+  --ding-primary: #3b82f6;
+  --ding-primary-hover: #2563eb;
+  --ding-primary-light: #1e293b;
+  --ding-bg: #0f172a;
+  --ding-header-bg: #1e293b;
+  --ding-header-text: #f8fafc;
+  --ding-body-bg: #0f172a;
+  --ding-user-bubble: #2563eb;
+  --ding-user-text: #ffffff;
+  --ding-bot-bubble: #1e293b;
+  --ding-bot-text: #e2e8f0;
+  --ding-border: #334155;
+  --ding-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+/* Floating Launcher Button */
+.ding-launcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--ding-primary);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 132, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  z-index: var(--ding-zindex);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+  outline: none;
+}
+
+.ding-launcher:hover {
+  transform: scale(1.08);
+  box-shadow: 0 12px 28px rgba(0, 132, 255, 0.45);
+}
+
+.ding-launcher-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.ding-launcher.ding-pos-left {
+  right: auto;
+  left: 24px;
+}
+
+.ding-launcher-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  background: #22c55e;
+  border: 2.5px solid #ffffff;
+  border-radius: 50%;
+  animation: ding-pulse 2s infinite;
+}
+
+@keyframes ding-pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+/* Main Chat Container */
+.ding-container {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  height: 620px;
+  max-height: calc(100vh - 120px);
+  background: var(--ding-bg);
+  border-radius: var(--ding-radius);
+  box-shadow: var(--ding-shadow);
+  border: 1px solid var(--ding-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: var(--ding-zindex);
+  font-family: var(--ding-font);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px) scale(0.96);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
+}
+
+.ding-container.ding-pos-left {
+  right: auto;
+  left: 24px;
+}
+
+.ding-container.ding-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+/* Header */
+.ding-header {
+  background: var(--ding-header-bg);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ding-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ding-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ding-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--ding-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: visible;
+}
+
+.ding-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.ding-status-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 11px;
+  height: 11px;
+  background: #22c55e;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.ding-title-wrap {
+  min-width: 0;
+}
+
+.ding-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ding-header-text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ding-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin: 1px 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ding-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ding-action-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ding-action-btn:hover {
+  background: var(--ding-primary-light);
+  color: var(--ding-primary);
+}
+
+/* Quick Actions / Chips */
+.ding-quick-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--ding-bg);
+  border-bottom: 1px solid var(--ding-border);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+
+.ding-quick-bar::-webkit-scrollbar {
+  height: 4px;
+}
+.ding-quick-bar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.ding-chip {
+  background: var(--ding-primary-light);
+  color: var(--ding-primary);
+  border: 1px solid rgba(0, 132, 255, 0.15);
+  padding: 5px 11px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.ding-chip:hover {
+  background: var(--ding-primary);
+  color: #ffffff;
+}
+
+/* Chat Body */
+.ding-body {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--ding-body-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+
+.ding-message {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 82%;
+  animation: ding-fade-in 0.2s ease-out;
+}
+
+@keyframes ding-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ding-message.ding-incoming {
+  align-self: flex-start;
+}
+
+.ding-message.ding-outgoing {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.ding-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ding-primary);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ding-msg-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.ding-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  word-break: break-word;
+  white-space: pre-wrap;
+  position: relative;
+}
+
+.ding-incoming .ding-bubble {
+  background: var(--ding-bot-bubble);
+  color: var(--ding-bot-text);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.ding-outgoing .ding-bubble {
+  background: var(--ding-user-bubble);
+  color: var(--ding-user-text);
+  border-bottom-right-radius: 4px;
+}
+
+.ding-time {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* Typing Indicator */
+.ding-typing {
+  display: none;
+  align-self: flex-start;
+  background: var(--ding-bot-bubble);
+  padding: 10px 16px;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+}
+
+.ding-dot {
+  height: 6px;
+  width: 6px;
+  background-color: #94a3b8;
+  border-radius: 50%;
+  display: inline-block;
+  margin: 0 2px;
+  animation: ding-bounce 1.3s infinite ease-in-out;
+}
+
+.ding-dot:nth-child(1) { animation-delay: 0s; }
+.ding-dot:nth-child(2) { animation-delay: 0.2s; }
+.ding-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes ding-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+
+/* Footer & Input */
+.ding-footer {
+  padding: 12px 14px;
+  background: var(--ding-bg);
+  border-top: 1px solid var(--ding-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ding-input {
+  flex: 1;
+  border: 1px solid var(--ding-border);
+  background: var(--ding-body-bg);
+  color: var(--ding-header-text);
+  padding: 10px 14px;
+  border-radius: 22px;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.ding-input:focus {
+  border-color: var(--ding-primary);
+}
+
+.ding-send-btn {
+  background: var(--ding-primary);
+  border: none;
+  color: #ffffff;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: transform 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.ding-send-btn:hover {
+  background: var(--ding-primary-hover);
+  transform: scale(1.05);
+}
+
+/* Footer Tag / Brand */
+.ding-brand {
+  font-size: 10.5px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 4px 0 8px;
+  background: var(--ding-bg);
+}
+
+.ding-brand a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ding-brand a:hover {
+  color: var(--ding-primary);
+}
