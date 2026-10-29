@@ -1077,7 +1077,7 @@ DingChat.init({
                       onChange={e => setTestAiModel(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500"
                     >
-                      {availableModels.map(m => (
+                      {AVAILABLE_MODELS.map(m => (
                         <option key={m.id} value={m.id}>{m.name} ({m.badge})</option>
                       ))}
                     </select>
