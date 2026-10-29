@@ -140,6 +140,16 @@ export function handleItKnowledge(message, ip) {
            `For static IP assignments or VLAN routing, please contact Tech Luzon Ext. 4401.`;
   }
 
+  // 1.1 Qwen / Ollama status check
+  if (lower.includes("is qwen live") || lower.includes("is ollama live") || lower.includes("model status") || lower === "check ai") {
+    return `⚡ **E.L.L.I.E. Model Connectivity Status**:\n\n` +
+           `• **Target Model**: \`qwen2.5-coder:1.5b\` (Uratex SAP O2C)\n` +
+           `• **Configured Server**: \`http://10.0.120.202:11434\`\n` +
+           `• **Network Notice**: \`10.0.120.202\` is an internal LAN IP address.\n` +
+           `• **Cloudflare Status**: Because this chatbot is hosted on Cloudflare Pages (\`ellie-chatbot.pages.dev\`), Cloudflare's public cloud servers cannot route directly into the private internal \`10.x.x.x\` intranet without a **Cloudflare Tunnel** (\`cloudflared\`) or public reverse proxy.\n\n` +
+           `💡 _To enable live Qwen inference from Cloudflare, route your Ollama port via a Cloudflare Tunnel or provide a public URL._`;
+  }
+
   // 2. Keyboard & Mouse (Rule 7: Hardware)
   if (lower.includes("keyboard") || lower.includes("keys") || lower.includes("mouse") || lower.includes("typing") || lower.includes("numlock") || lower.includes("capslock")) {
     return `⌨️ **Keyboard & Peripheral Troubleshooting (Rule 7: Safe Hardware Check)**:\n\n` +

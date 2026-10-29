@@ -279,6 +279,14 @@ function handle_internal_it_rules($message, $userIp) {
                "If you are experiencing connection drops or need static IP allocation, please contact Tech Luzon Ext. 4401.";
     }
 
+    // Model Status Check
+    if (strpos($lower, "is qwen live") !== false || strpos($lower, "is ollama live") !== false || strpos($lower, "check ai") !== false) {
+        return "⚡ **E.L.L.I.E. Model Connectivity Status**:\n\n" .
+               "• **Target Model**: `qwen2.5-coder:1.5b` (Uratex SAP O2C)\n" .
+               "• **Configured Server**: `http://10.0.120.202:11434`\n" .
+               "• **Network Notice**: `10.0.120.202` is a private intranet IP. Public cloud hosts like Cloudflare Pages cannot route directly into private `10.x.x.x` LANs without a Cloudflare Tunnel (`cloudflared`) or public reverse proxy.";
+    }
+
     // Ding! Ang Bato!
     if (strpos($lower, "ang bato") !== false || strpos($lower, "ding! ang bato") !== false || $lower === "ding") {
         $quotes = [
