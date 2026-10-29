@@ -139,14 +139,28 @@ function handleItKnowledge(message: string, ip: string): string | null {
            `Would you like me to look up contact info for someone specific?`;
   }
 
-  // 5. Directory Search
+  // 5. Tech Department Inquiry
+  if (lower.includes('tech department') || lower.includes('it department') || lower.includes('tech team') || lower.includes('talk to in the tech') || lower.includes('talked to in the tech')) {
+    const dir = loadDirectory();
+    const techStaff = dir.filter(p => (p.department || '').includes('TECH') || (p.departmentName || '').includes('Infrastructure'));
+    let reply = `💻 **Uratex Tech Infrastructure Department Contacts**:\n\n` +
+                `You can reach out to our dedicated Tech Infrastructure Specialists:\n\n`;
+    for (const item of techStaff.slice(0, 5)) {
+      reply += `• **${item.name}** — ${item.applicationRole || 'Tech Specialist'} (${item.plantLocation})\n` +
+               `  Email: \`${item.email}\`${item.mobile ? ` | Mobile: \`${item.mobile}\`` : ''}\n`;
+    }
+    reply += `\nFor immediate escalation or phone dispatch, contact the **Uratex IT Help Desk at Local Ext. 4401** or Support Manager **Eric Borromeo** (\`0917-822-4595\`).`;
+    return reply.trim();
+  }
+
+  // 6. Directory Search
   const dir = loadDirectory();
-  const searchTerms = ['who is', 'contact for', 'email of', 'phone of', 'mobile of', 'dev', 'developer', 'bsa', 'manager', 'cebu', 'cdo', 'davao', 'plaridel', 'valenzuela'];
+  const searchTerms = ['who is', 'contact for', 'email of', 'phone of', 'mobile of', 'dev', 'developer', 'bsa', 'manager', 'cebu', 'cdo', 'davao', 'plaridel', 'valenzuela', 'talk to', 'talked to', 'speak to', 'reach out', 'contact'];
   const hasSearch = searchTerms.some(t => lower.includes(t));
 
   if (hasSearch && dir.length > 0) {
     const q = lower
-      .replace(/who is|contact for|email of|phone of|mobile of|please|tell me about|in the|who are the members of the/g, '')
+      .replace(/who is|contact for|email of|phone of|mobile of|please|tell me about|in the|who are the members of the|who can i talked to|who can i talk to|who can i speak to|who can i contact/g, '')
       .replace(/[^a-z0-9\s]/g, '')
       .trim();
 
@@ -256,72 +270,148 @@ async function handleApi(req: express.Request, res: express.Response) {
     });
   }
 
-  // 2. DIAGNOSTICS & CONFIG VERIFICATION
-  if (action === 'check_config' || action === 'diagnostics' || req.path === '/api/check-config') {
+  // 2. DIAGNOSTICS & TEST AI
+  if (action === 'test_ai' || action === 'test-ai' || req.path === '/api/test-ai' || action === 'check_config' || action === 'diagnostics' || req.path === '/api/check-config') {
+    const testUrl = ((req.body?.url || url.searchParams.get('url') || OLLAMA_API_URL || 'http://10.0.120.202:11434/v1/chat/completions') as string).trim();
+    const testKey = ((req.body?.key || url.searchParams.get('key') || OLLAMA_API_KEY || 'uratex_corp_it_jwt_token_auth_2026') as string).trim();
+    const testModel = ((req.body?.model || url.searchParams.get('model') || OLLAMA_MODEL || 'qwen2.5-coder:1.5b') as string).trim();
+
     let host = '';
     let port = 11434;
-    let isPrivate = false;
     try {
-      const u = new URL(OLLAMA_API_URL);
-      host = u.hostname;
-      port = parseInt(u.port, 10) || 11434;
-      isPrivate = host.startsWith('10.') || host.startsWith('192.168.') || host.startsWith('172.') || host === 'localhost' || host === '127.0.0.1';
-    } catch (e) {}
+      const parsed = new URL(testUrl);
+      host = parsed.hostname;
+      port = parseInt(parsed.port || (parsed.protocol === 'https:' ? '443' : '80'), 10);
+    } catch (e) {
+      host = testUrl;
+    }
 
-    // Probe Ollama with 1.8s timeout
+    const isPrivate = host.startsWith('10.') || 
+                      host.startsWith('192.168.') || 
+                      host.startsWith('172.16.') || 
+                      host.startsWith('172.17.') || 
+                      host.startsWith('172.18.') || 
+                      host.startsWith('172.19.') || 
+                      host.startsWith('172.2') || 
+                      host.startsWith('172.3') || 
+                      host === 'localhost' || 
+                      host === '127.0.0.1';
+
+    const startTime = Date.now();
     let reachable = false;
     let probeError: string | null = null;
     let httpStatus = 0;
+    let latencyMs = 0;
+    let responseSample: string | null = null;
+    let errorCategory = 'unknown';
+
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1800);
-      const testRes = await fetch(OLLAMA_API_URL, {
+      const timer = setTimeout(() => controller.abort(), 2500);
+      const testRes = await fetch(testUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OLLAMA_API_KEY}`
+          'Authorization': `Bearer ${testKey}`
         },
         body: JSON.stringify({
-          model: OLLAMA_MODEL,
+          model: testModel,
           messages: [{ role: 'user', content: 'ping' }],
           stream: false
         }),
         signal: controller.signal
       });
       clearTimeout(timer);
+      latencyMs = Date.now() - startTime;
       httpStatus = testRes.status;
-      if (testRes.ok || testRes.status === 200 || testRes.status === 400 || testRes.status === 404) {
+
+      if (testRes.ok) {
         reachable = true;
+        errorCategory = 'success';
+        try {
+          const data: any = await testRes.json();
+          responseSample = data.choices?.[0]?.message?.content || data.message?.content || 'Model responded successfully';
+        } catch (e) {
+          responseSample = 'HTTP 200 OK received';
+        }
+      } else {
+        const errorText = await testRes.text().catch(() => '');
+        probeError = `HTTP ${testRes.status}: ${errorText.substring(0, 150) || testRes.statusText}`;
+        if (httpStatus === 401 || httpStatus === 403) {
+          errorCategory = 'auth_error';
+        } else if (httpStatus === 404) {
+          errorCategory = 'model_not_found';
+        } else {
+          errorCategory = 'http_error';
+        }
       }
     } catch (err: any) {
-      probeError = err.message || 'Connection timeout';
+      latencyMs = Date.now() - startTime;
+      probeError = err.message || 'Connection failed / timed out';
+      if (err.name === 'AbortError' || probeError?.includes('abort') || probeError?.includes('timeout')) {
+        errorCategory = 'timeout';
+      } else {
+        errorCategory = 'connection_refused';
+      }
+    }
+
+    let explanation = '';
+    let solutionSteps: string[] = [];
+
+    if (errorCategory === 'timeout') {
+      explanation = `The request to ${testUrl} timed out after ${latencyMs}ms. Target server did not respond.`;
+      solutionSteps = [
+        'Check that 10.0.120.202 is powered on and reachable on the intranet',
+        'Verify port 11434 is allowed through firewall',
+        'If connecting remotely, verify Cisco AnyConnect VPN is connected'
+      ];
+    } else if (errorCategory === 'model_not_found') {
+      explanation = `Server is reachable, but model "${testModel}" was not found (HTTP 404).`;
+      solutionSteps = [
+        `Run "ollama pull ${testModel}" on the host server (10.0.120.202)`,
+        'Run "ollama list" to verify pulled models'
+      ];
+    } else if (errorCategory === 'auth_error') {
+      explanation = `HTTP ${httpStatus} Unauthorized. The API key was rejected by the gateway.`;
+      solutionSteps = [
+        'Check API key / Bearer token configuration in reverse proxy'
+      ];
+    } else if (errorCategory === 'success') {
+      explanation = `Successfully connected to Ollama! Model "${testModel}" responded in ${latencyMs}ms.`;
+      solutionSteps = ['All systems operational! Real-time AI inference is active.'];
+    } else {
+      explanation = `Could not connect to Ollama: ${probeError}`;
+      solutionSteps = [
+        'Verify Ollama is running with "OLLAMA_HOST=0.0.0.0:11434 ollama serve"',
+        'Verify network route to 10.0.120.202'
+      ];
     }
 
     return res.json({
       success: true,
       timestamp: Date.now(),
       config: {
-        OLLAMA_API_URL: OLLAMA_API_URL,
-        OLLAMA_API_KEY: OLLAMA_API_KEY ? `${OLLAMA_API_KEY.substring(0, 10)}...${OLLAMA_API_KEY.substring(OLLAMA_API_KEY.length - 4)}` : 'not_set',
-        OLLAMA_MODEL: OLLAMA_MODEL,
+        OLLAMA_API_URL: testUrl,
+        OLLAMA_API_KEY: testKey ? `${testKey.substring(0, 10)}...${testKey.substring(testKey.length - 4)}` : 'not_set',
+        OLLAMA_MODEL: testModel,
         targetHost: host,
         targetPort: port,
-        isPrivateNetwork: isPrivate
+        isPrivateIp: isPrivate,
+        hasGeminiKey: !!geminiClient
       },
       diagnostics: {
         reachable,
         httpStatus,
+        latencyMs,
         error: probeError,
+        errorCategory,
+        explanation,
+        solutionSteps,
+        responseSample,
         cloudFallback: !!geminiClient ? 'Gemini 3.8 Flash (Active)' : 'Intelligent Rule Engine (Active)',
         networkSummary: isPrivate 
           ? 'Host 10.0.120.202 is an internal Uratex private intranet IP. It connects automatically when inside the corporate LAN or VPN.' 
           : 'Public or reachable host.'
-      },
-      recommendation: {
-        status: reachable ? 'connected' : (isPrivate ? 'intranet_ready' : 'check_endpoint'),
-        explanation: reachable 
-          ? 'Ollama endpoint is reachable and generating completions.'
-          : 'When accessing from outside the Uratex internal network, E.L.L.I.E. automatically activates high-precision IT rule processing and cloud Gemini fallback so users always get instant, accurate help.'
       }
     });
   }

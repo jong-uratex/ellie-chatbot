@@ -236,11 +236,24 @@ export function handleItKnowledge(message, ip) {
            `For physical hardware replacement, call your plant IT technician.`;
   }
 
-  // 10. Directory Search
-  const searchTerms = ['who is', 'contact for', 'email of', 'phone of', 'mobile of', 'dev', 'developer', 'bsa', 'manager', 'cebu', 'cdo', 'davao', 'plaridel', 'valenzuela'];
+  // 10. Tech Department Inquiry
+  if (lower.includes('tech department') || lower.includes('it department') || lower.includes('tech team') || lower.includes('talk to in the tech') || lower.includes('talked to in the tech')) {
+    const techStaff = DIRECTORY_DATA.filter(p => (p.department || '').includes('TECH') || (p.departmentName || '').includes('Infrastructure'));
+    let reply = `💻 **Uratex Tech Infrastructure Department Contacts**:\n\n` +
+                `You can reach out to our dedicated Tech Infrastructure Specialists:\n\n`;
+    for (const item of techStaff.slice(0, 5)) {
+      reply += `• **${item.name}** — ${item.applicationRole || 'Tech Specialist'} (${item.plantLocation})\n` +
+               `  Email: \`${item.email}\`${item.mobile ? ` | Mobile: \`${item.mobile}\`` : ''}\n`;
+    }
+    reply += `\nFor immediate escalation or phone dispatch, contact the **Uratex IT Help Desk at Local Ext. 4401** or Support Manager **Eric Borromeo** (\`0917-822-4595\`).`;
+    return reply.trim();
+  }
+
+  // 11. Directory Search
+  const searchTerms = ['who is', 'contact for', 'email of', 'phone of', 'mobile of', 'dev', 'developer', 'bsa', 'manager', 'cebu', 'cdo', 'davao', 'plaridel', 'valenzuela', 'talk to', 'talked to', 'speak to', 'reach out', 'contact'];
   if (searchTerms.some(t => lower.includes(t))) {
     const q = lower
-      .replace(/who is|contact for|email of|phone of|mobile of|please|tell me about|in the|who are the members of the/g, '')
+      .replace(/who is|contact for|email of|phone of|mobile of|please|tell me about|in the|who are the members of the|who can i talked to|who can i talk to|who can i speak to|who can i contact/g, '')
       .replace(/[^a-z0-9\s]/g, '')
       .trim();
 
@@ -336,38 +349,144 @@ export async function handleCloudflareRequest(context) {
     });
   }
 
-  // 2. DIAGNOSTICS & CONFIG
-  if (action === 'check_config' || action === 'diagnostics' || url.pathname.endsWith('/check-config')) {
-    const ollamaUrl = env.OLLAMA_API_URL || 'http://10.0.120.202:11434/v1/chat/completions';
-    const ollamaKey = env.OLLAMA_API_KEY || 'uratex_corp_it_jwt_token_auth_2026';
-    const ollamaModel = env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
+  // 2. DIAGNOSTICS & TEST AI
+  if (action === 'test_ai' || action === 'test-ai' || url.pathname.endsWith('/test-ai') || action === 'check_config' || action === 'diagnostics' || url.pathname.endsWith('/check-config')) {
+    let body = {};
+    if (request.method === 'POST') {
+      try {
+        const text = await request.text();
+        if (text) body = JSON.parse(text);
+      } catch (e) {}
+    }
+
+    const testUrl = (body.url || url.searchParams.get('url') || env.OLLAMA_API_URL || 'http://10.0.120.202:11434/v1/chat/completions').trim();
+    const testKey = (body.key || url.searchParams.get('key') || env.OLLAMA_API_KEY || 'uratex_corp_it_jwt_token_auth_2026').trim();
+    const testModel = (body.model || url.searchParams.get('model') || env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b').trim();
     const hasGemini = !!env.GEMINI_API_KEY;
 
+    let parsedHost = '';
+    let parsedPort = 11434;
+    try {
+      const u = new URL(testUrl);
+      parsedHost = u.hostname;
+      parsedPort = u.port || (u.protocol === 'https:' ? 443 : 80);
+    } catch (e) {
+      parsedHost = testUrl;
+    }
+
+    const isPrivateIp = parsedHost.startsWith('10.') || 
+                        parsedHost.startsWith('192.168.') || 
+                        parsedHost.startsWith('172.16.') || 
+                        parsedHost.startsWith('172.17.') || 
+                        parsedHost.startsWith('172.18.') || 
+                        parsedHost.startsWith('172.19.') || 
+                        parsedHost.startsWith('172.2') || 
+                        parsedHost.startsWith('172.3') || 
+                        parsedHost === 'localhost' || 
+                        parsedHost === '127.0.0.1';
+
+    const isCloudflarePages = url.hostname.includes('pages.dev') || url.hostname.includes('workers.dev');
+
+    const startTime = Date.now();
     let reachable = false;
+    let httpStatus = 0;
     let probeError = null;
+    let latencyMs = 0;
+    let responseSample = null;
+    let errorCategory = 'unknown';
 
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1200);
-      const testRes = await fetch(ollamaUrl, {
+      const timer = setTimeout(() => controller.abort(), 2500);
+      const testRes = await fetch(testUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ollamaKey}`
+          'Authorization': `Bearer ${testKey}`
         },
         body: JSON.stringify({
-          model: ollamaModel,
+          model: testModel,
           messages: [{ role: 'user', content: 'ping' }],
           stream: false
         }),
         signal: controller.signal
       });
       clearTimeout(timer);
-      if (testRes.ok || testRes.status === 200 || testRes.status === 400 || testRes.status === 404) {
+      latencyMs = Date.now() - startTime;
+      httpStatus = testRes.status;
+
+      if (testRes.ok) {
         reachable = true;
+        errorCategory = 'success';
+        try {
+          const data = await testRes.json();
+          responseSample = data.choices?.[0]?.message?.content || data.message?.content || 'Model responded successfully';
+        } catch (e) {
+          responseSample = 'HTTP 200 OK received';
+        }
+      } else {
+        const errorText = await testRes.text().catch(() => '');
+        probeError = `HTTP ${testRes.status}: ${errorText.substring(0, 150) || testRes.statusText}`;
+        if (httpStatus === 401 || httpStatus === 403) {
+          errorCategory = 'auth_error';
+        } else if (httpStatus === 404) {
+          errorCategory = 'model_not_found';
+        } else {
+          errorCategory = 'http_error';
+        }
       }
     } catch (e) {
-      probeError = e.message || 'Timeout / Internal LAN unreachable';
+      latencyMs = Date.now() - startTime;
+      probeError = e.message || 'Connection failed / timed out';
+      if (isPrivateIp && isCloudflarePages) {
+        errorCategory = 'private_ip_cloud_mismatch';
+      } else if (e.name === 'AbortError' || probeError.includes('abort') || probeError.includes('timeout')) {
+        errorCategory = 'timeout';
+      } else {
+        errorCategory = 'connection_refused';
+      }
+    }
+
+    let explanation = '';
+    let solutionSteps = [];
+
+    if (errorCategory === 'private_ip_cloud_mismatch') {
+      explanation = `Your app is hosted on Cloudflare Pages (${url.hostname}), but the target URL (${testUrl}) points to an internal LAN IP (${parsedHost}). Public cloud servers cannot reach internal IP addresses behind your corporate firewall without a tunnel.`;
+      solutionSteps = [
+        'Run Cloudflare Tunnel on the Ollama host (10.0.120.202): "cloudflared tunnel --url http://localhost:11434"',
+        'Assign a public hostname (e.g. https://ollama.uratex.com.ph or a trycloudflare tunnel domain)',
+        'Update OLLAMA_API_URL in Cloudflare Pages environment variables to that public tunnel URL',
+        'Alternatively, set GEMINI_API_KEY in Cloudflare Pages for instant Cloud AI fallback'
+      ];
+    } else if (errorCategory === 'timeout') {
+      explanation = `The request to ${testUrl} timed out after ${latencyMs}ms. The server did not respond.`;
+      solutionSteps = [
+        'Verify that the Ollama host (10.0.120.202) is powered on and reachable on the network',
+        'Check that port 11434 is allowed in your local/host firewall',
+        'If testing from outside the office, connect to Cisco AnyConnect VPN (vpn.uratex.com.ph)'
+      ];
+    } else if (errorCategory === 'model_not_found') {
+      explanation = `The Ollama server is reachable, but model "${testModel}" was not found (HTTP 404).`;
+      solutionSteps = [
+        `Run "ollama pull ${testModel}" on the host server (10.0.120.202)`,
+        'Run "ollama list" to verify all downloaded models on that machine',
+        'Select a model from the list that is already pulled'
+      ];
+    } else if (errorCategory === 'auth_error') {
+      explanation = `The server returned HTTP ${httpStatus} Unauthorized. The API key was rejected.`;
+      solutionSteps = [
+        'Check if an API gateway or reverse proxy in front of Ollama requires a specific JWT or Bearer token',
+        'Verify OLLAMA_API_KEY matches the reverse proxy configuration'
+      ];
+    } else if (errorCategory === 'success') {
+      explanation = `Successfully connected to Ollama! Model "${testModel}" responded in ${latencyMs}ms.`;
+      solutionSteps = ['All systems operational! Real-time AI inference is active.'];
+    } else {
+      explanation = `Could not connect to Ollama: ${probeError}`;
+      solutionSteps = [
+        'Verify Ollama is running with "OLLAMA_HOST=0.0.0.0:11434 ollama serve"',
+        'Verify network connectivity between this client and the host'
+      ];
     }
 
     return jsonResponse({
@@ -375,16 +494,28 @@ export async function handleCloudflareRequest(context) {
       platform: 'Cloudflare Pages Functions',
       timestamp: Date.now(),
       config: {
-        OLLAMA_API_URL: ollamaUrl,
-        OLLAMA_API_KEY: ollamaKey ? `${ollamaKey.substring(0, 10)}...${ollamaKey.substring(ollamaKey.length - 4)}` : 'not_set',
-        OLLAMA_MODEL: ollamaModel,
+        OLLAMA_API_URL: testUrl,
+        OLLAMA_API_KEY: testKey ? `${testKey.substring(0, 10)}...${testKey.substring(testKey.length - 4)}` : 'not_set',
+        OLLAMA_MODEL: testModel,
+        targetHost: parsedHost,
+        targetPort: parsedPort,
+        isPrivateIp,
+        isCloudflarePages,
         hasGeminiKey: hasGemini
       },
       diagnostics: {
         reachable,
+        httpStatus,
+        latencyMs,
         error: probeError,
+        errorCategory,
+        explanation,
+        solutionSteps,
+        responseSample,
         cloudFallback: hasGemini ? 'Gemini Cloud AI (Edge Active)' : 'Intelligent Rule Engine (Active)',
-        networkSummary: 'Cloudflare Pages Edge handles all API traffic natively with 0ms cold starts.'
+        networkSummary: isPrivateIp && isCloudflarePages
+          ? 'Cloudflare Edge to Private LAN: Cannot route directly without Cloudflare Tunnel.'
+          : (reachable ? 'Connected and operational.' : 'Unreachable.')
       }
     });
   }
