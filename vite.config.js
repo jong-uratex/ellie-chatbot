@@ -48,17 +48,7 @@ export default defineConfig(() => {
       tailwindcss(),
       cloudflarePagesStaticPlugin()
     ],
-    esbuild: {
-      loader: 'jsx',
-      include: /src\/.*\.jsx?$|public\/.*\.js$/,
-    },
-    optimizeDeps: {
-      esbuildOptions: {
-        loader: {
-          '.js': 'jsx',
-        },
-      },
-    },
+
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
