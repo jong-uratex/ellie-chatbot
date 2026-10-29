@@ -433,6 +433,43 @@ export async function handleCloudflareRequest(context) {
     });
   }
 
+  // 7. PROMPTS CSV
+  if (action === 'prompts' || url.pathname.endsWith('/prompts')) {
+    const csvData = `id,category,name,role,content,is_active,description,updated_at
+SYSTEM_MAIN,system,E.L.L.I.E. Core Persona,system,"You are E.L.L.I.E. (Employee Link for Learning, Information & IT Essentials), the friendly and dependable AI IT Helpdesk Assistant for Uratex Philippines.",true,Master system identity,2026-10-27
+RULE_1_IT_SCOPE,rule,Rule 1: IT Support Scope,system,"Only provide assistance related to workplace IT, computers, software, networks, email, printers, accounts, and approved Uratex business systems.",true,Scope of support,2026-10-27
+RULE_2_WORKFLOW,rule,Rule 2: Troubleshooting Workflow,system,"When an employee reports a technical problem, provide safe, reversible troubleshooting steps starting with simplest checks.",true,Safe troubleshooting steps,2026-10-27
+RULE_3_ACCOUNTS,rule,Rule 3: Account and Password Assistance,system,"Help employees with general account sign-in and password-reset using approved procedures.",true,Security protocol,2026-10-27
+RULE_4_CYBERSECURITY,rule,Rule 4: Cybersecurity and Phishing Protection,system,"Help employees recognize suspicious emails, links, and phishing attempts.",true,Phishing protection,2026-10-27
+RULE_5_NETWORK_VPN,rule,Rule 5: Network and VPN Troubleshooting,system,"Assist with Wi-Fi, Ethernet, internet access, and Cisco AnyConnect VPN (vpn.uratex.com.ph).",true,Network & VPN,2026-10-27
+RULE_6_EMAIL_APPS,rule,Rule 6: Email and Productivity Applications,system,"Provide guidance for Microsoft 365, Outlook, and Teams.",true,M365 guidance,2026-10-27
+RULE_7_HARDWARE_PRINTER,rule,Rule 7: Hardware and Printer Support,system,"Help employees troubleshoot workplace computers, peripherals, and Zebra printers.",true,Hardware & printer,2026-10-27
+RULE_8_SAP_APPS,rule,Rule 8: SAP and Business Application Support,system,"Assist with SAP S/4HANA and business applications.",true,SAP support,2026-10-27
+RULE_9_ESCALATION,rule,Rule 9: IT Escalation and Service Requests,system,"Recommend escalation to Uratex IT Helpdesk Local Ext. 4401 when required.",true,Escalation workflow,2026-10-27
+RULE_10_SECURITY,rule,Rule 10: Response Quality and Information Security,system,"Keep responses friendly, professional, and secure.",true,Confidentiality,2026-10-27
+RULE_11_URIE_O2C,rule,Rule 11: URIE Order-to-Cash (O2C) Capability,system,"Provide expert guidance on SAP SD sales orders (VA01/VA02), ATP stock checks (CO09), and billing (VF01/VF02).",true,Order-to-Cash,2026-10-27
+RULE_12_EMAIL_SIGNATURE,rule,Rule 12: Uratex Email Signature Generator,system,"Guide employees through the Uratex Email Signature Generator (https://email-signature-4ti.pages.dev).",true,Official email signature generator setup instructions,2026-10-28`;
+    return jsonResponse({ success: true, csv: csvData });
+  }
+
+  // 8. CODE FILES VIEWER
+  if (action === 'files' || url.pathname.endsWith('/files')) {
+    const file = (url.searchParams.get('file') || '').replace(/\.\.\//g, '');
+    let content = `// Cloudflare Pages compatibility source for ${file}\n// File is maintained in your GitHub repository and built to Cloudflare Pages edge.`;
+    if (file === 'wrangler.toml') {
+      content = `name = "ellie-chatbot"\ncompatibility_date = "2024-11-01"\ncompatibility_flags = ["nodejs_compat"]\npages_build_output_dir = "dist"`;
+    } else if (file === 'public/_redirects') {
+      content = `/index.php   /            301\n/public/*    /:splat      200\n/api/*       /api/:splat  200\n/*           /index.html  200`;
+    }
+    return new Response(content, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        ...corsHeaders
+      }
+    });
+  }
+
   // 7. CHAT MESSAGE (POST)
   if (action === 'chat' || action === 'send_message' || url.pathname.endsWith('/chat') || url.pathname.endsWith('/api.php') || url.pathname.endsWith('/api')) {
     let body = {};

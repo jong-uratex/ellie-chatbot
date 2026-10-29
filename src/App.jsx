@@ -191,12 +191,21 @@ export default function App() {
     }
   };
 
-  // Initialize session
+  // Initialize session safely
   useEffect(() => {
-    let sid = localStorage.getItem('ding_studio_session_id');
+    let sid = '';
+    try {
+      sid = localStorage.getItem('ding_studio_session_id');
+    } catch (e) {
+      console.warn('localStorage read prevented:', e);
+    }
     if (!sid) {
       sid = 'ding_sess_' + Math.random().toString(36).substring(2, 9);
-      localStorage.setItem('ding_studio_session_id', sid);
+      try {
+        localStorage.setItem('ding_studio_session_id', sid);
+      } catch (e) {
+        console.warn('localStorage write prevented:', e);
+      }
     }
     setSessionId(sid);
     loadSession(sid);
@@ -282,7 +291,7 @@ export default function App() {
         const lines = text.split('\n').filter(Boolean);
         const parsed = lines.slice(1).map(l => {
           const parts = l.split(',');
-          return { id: parts[0], name: parts[2], role: parts[3], active: parts[5] };
+          return { id: parts[0] || '', name: parts[2] || parts[0] || 'Prompt', role: parts[3] || 'system', active: parts[5] || 'true' };
         });
         setPromptsList(parsed);
       }
@@ -405,7 +414,9 @@ export default function App() {
     } catch (e) {}
 
     const newSid = 'ding_sess_' + Math.random().toString(36).substring(2, 9);
-    localStorage.setItem('ding_studio_session_id', newSid);
+    try {
+      localStorage.setItem('ding_studio_session_id', newSid);
+    } catch (e) {}
     setSessionId(newSid);
     setChatMessages([
       {

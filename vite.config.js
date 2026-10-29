@@ -40,6 +40,7 @@ function cloudflarePagesStaticPlugin() {
 
 export default defineConfig(() => {
   return {
+    base: '/',
     plugins: [
       react({
         include: /\.(jsx|js)$/,

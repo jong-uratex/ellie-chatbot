@@ -1,1 +1,5 @@
-/public/*  /:splat  200
+# Cloudflare Pages Redirects & SPA Fallback
+/index.php   /            301
+/public/*    /:splat      200
+/api/*       /api/:splat  200
+/*           /index.html  200
